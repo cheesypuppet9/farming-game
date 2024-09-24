@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Infinite Platformer Game</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css">
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #282c34;
+        }
+        canvas {
+            background-color: #87ceeb;
+            border: 2px solid #000;
+        }
+        #score {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: white;
+            font-size: 20px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="score">Score: 0</div>
+    <canvas id="gameCanvas" width="800" height="400"></canvas>
+
+    <script>
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+        const scoreDisplay = document.getElementById("score");
+
+        // Game Variables
+        let player = { x: 50, y: 300, width: 30, height: 30, dy: 0, gravity: 0.5, jumpPower: -10, onGround: false };
+        let platforms = [{ x: 0, y: 350, width: 800, height: 20 }];
+        let score = 0;
+        let gameSpeed = 2;
+        let gameOver = false;
+
+        function drawPlayer() {
+            ctx.fillStyle = "red";
+            ctx.fillRect(player.x, player.y, player.width, player.height);
+        }
+
+        function drawPlatforms() {
+            ctx.fillStyle = "green";
+            platforms.forEach(platform => {
+                ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
+            });
+        }
+
+        function updatePlayer() {
+            if (player.y + player.height < canvas.height) {
+                player.dy += player.gravity;
+                player.y += player.dy;
+            } else {
+                player.onGround = true;
+                player.dy = 0;
+                player.y = canvas.height - player.height;
+            }
+
+            // Jump logic
+            if (player.onGround && keys["Space"]) {
+                player.dy = player.jumpPower;
+                player.onGround = false;
+            }
+        }
+
+        function updatePlatforms() {
+            platforms.forEach((platform, index) => {
+                platform.x -= gameSpeed;
+                if (platform.x + platform.width < 0) {
+                    platforms.splice(index, 1);
+                    platforms.push({ x: canvas.width, y: 350, width: 200, height: 20 });
+                    score++;
+                    scoreDisplay.innerHTML = "Score: " + score;
+                }
+            });
+        }
+
+        function checkCollision() {
+            platforms.forEach(platform => {
+                if (player.y + player.height <= platform.y && player.y + player.height + player.dy >= platform.y &&
+                    player.x + player.width >= platform.x && player.x <= platform.x + platform.width) {
+                    player.onGround = true;
+                    player.dy = 0;
+                    player.y = platform.y - player.height;
+                }
+            });
+        }
+
+        function gameLoop() {
+            if (gameOver) return;
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            updatePlayer();
+            updatePlatforms();
+            checkCollision();
+
+            drawPlayer();
+            drawPlatforms();
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Key Events
+        const keys = {};
+        window.addEventListener("keydown", (e) => {
+            keys[e.code] = true;
+        });
+        window.addEventListener("keyup", (e) => {
+            keys[e.code] = false;
+        });
+
+        // Start the game loop
+        gameLoop();
+    </script>
+
+</body>
+</html>
