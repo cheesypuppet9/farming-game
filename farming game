@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Farming Game with NPCs</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css">
+  <style>
+    body, html {
+      height: 100%;
+      margin: 0;
+      background-color: #a8d5ba; /* Greenish farm background */
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    canvas {
+      border: 1px solid #000;
+      background-color: #e0e0e0;
+    }
+
+    #gameInfo {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      background: rgba(255, 255, 255, 0.8);
+      padding: 10px;
+      border-radius: 5px;
+    }
+
+    /* Basic styles for crops */
+    .plot {
+      width: 50px;
+      height: 50px;
+      background-color: #6b8e23; /* Soil color */
+      display: inline-block;
+      margin: 2px;
+    }
+
+    .planted {
+      background-color: #3cb371; /* Planted crop color */
+    }
+
+    .harvested {
+      background-color: #f4a460; /* Harvested plot color */
+    }
+
+    /* Player and NPC */
+    .npc {
+      width: 50px;
+      height: 50px;
+      background-color: yellow;
+      position: absolute;
+      top: 200px;
+      left: 600px;
+    }
+
+    .player {
+      width: 50px;
+      height: 50px;
+      background-color: blue;
+      position: absolute;
+    }
+  </style>
+</head>
+<body>
+
+<div id="gameInfo">
+  <h3>Farming Game</h3>
+  <p>Use <strong>WASD</strong> to move. Go near an NPC and press <strong>E</strong> to interact.</p>
+  <p>Walk over a plot and press <strong>P</strong> to plant, <strong>H</strong> to harvest.</p>
+  <p id="time">Day 1: Morning</p>
+</div>
+
+<main class="container">
+  <canvas id="gameCanvas" width="800" height="600"></canvas>
+</main>
+
+<script>
+  // Game canvas setup
+  const canvas = document.getElementById('gameCanvas');
+  const ctx = canvas.getContext('2d');
+
+  // Game state
+  const gameState = {
+    day: 1,
+    timeOfDay: 'Morning',
+    timeTick: 0
+  };
+
+  // Player character
+  const player = {
+    x: 50,
+    y: 50,
+    width: 50,
+    height: 50,
+    speed: 3
+  };
+
+  // NPC data
+  const npc = {
+    x: 600,
+    y: 200,
+    width: 50,
+    height: 50,
+    name: 'Farmer Bob',
+    dialog: 'Howdy, welcome to the farm!'
+  };
+
+  // Plots for farming
+  const plots = [
+    { x: 100, y: 400, status: 'empty' },
+    { x: 160, y: 400, status: 'empty' },
+    { x: 220, y: 400, status: 'empty' },
+    { x: 280, y: 400, status: 'empty' },
+    { x: 340, y: 400, status: 'empty' }
+  ];
+
+  const keys = {
+    w: false,
+    a: false,
+    s: false,
+    d: false,
+    e: false,
+    p: false,
+    h: false
+  };
+
+  // Function to draw NPC
+  function drawNPC() {
+    ctx.fillStyle = 'yellow';
+    ctx.fillRect(npc.x, npc.y, npc.width, npc.height);
+    ctx.font = '14px Arial';
+    ctx.fillText('NPC: ' + npc.name, npc.x - 20, npc.y - 10);
+  }
+
+  // Function to draw player
+  function drawPlayer() {
+    ctx.fillStyle = 'blue';
+    ctx.fillRect(player.x, player.y, player.width, player.height);
+  }
+
+  // Draw farming plots
+  function drawPlots() {
+    plots.forEach(plot => {
+      if (plot.status === 'empty') {
+        ctx.fillStyle = '#6b8e23'; // Empty plot
+      } else if (plot.status === 'planted') {
+        ctx.fillStyle = '#3cb371'; // Planted crop
+      } else if (plot.status === 'harvested') {
+        ctx.fillStyle = '#f4a460'; // Harvested plot
+      }
+      ctx.fillRect(plot.x, plot.y, 50, 50);
+    });
+  }
+
+  // Check if player is near NPC for interaction
+  function checkInteraction() {
+    if (keys.e && player.x < npc.x + npc.width && player.x + player.width > npc.x &&
+        player.y < npc.y + npc.height && player.y + player.height > npc.y) {
+      alert(npc.dialog);
+      keys.e = false;
+    }
+  }
+
+  // Plant or harvest on plot
+  function interactWithPlot() {
+    plots.forEach(plot => {
+      if (player.x < plot.x + 50 && player.x + player.width > plot.x &&
+          player.y < plot.y + 50 && player.y + player.height > plot.y) {
+        if (keys.p && plot.status === 'empty') {
+          plot.status = 'planted';
+        } else if (keys.h && plot.status === 'planted') {
+          plot.status = 'harvested';
+        }
+        keys.p = false;
+        keys.h = false;
+      }
+    });
+  }
+
+  // Function to move player
+  function movePlayer() {
+    if (keys.w && player.y > 0) player.y -= player.speed;
+    if (keys.s && player.y + player.height < canvas.height) player.y += player.speed;
+    if (keys.a && player.x > 0) player.x -= player.speed;
+    if (keys.d && player.x + player.width < canvas.width) player.x += player.speed;
+  }
+
+  // Update game state (day-night cycle)
+  function updateTime() {
+    gameState.timeTick++;
+    if (gameState.timeTick % 300 === 0) {
+      if (gameState.timeOfDay === 'Morning') gameState.timeOfDay = 'Afternoon';
+      else if (gameState.timeOfDay === 'Afternoon') gameState.timeOfDay = 'Evening';
+      else if (gameState.timeOfDay === 'Evening') {
+        gameState.timeOfDay = 'Morning';
+        gameState.day++;
+      }
+      document.getElementById('time').textContent = `Day ${gameState.day}: ${gameState.timeOfDay}`;
+    }
+  }
+
+  // Main game loop
+  function gameLoop() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear canvas
+    drawNPC();
+    drawPlayer();
+    drawPlots();
+    checkInteraction();
+    interactWithPlot();
+    movePlayer();
+    updateTime();
+    requestAnimationFrame(gameLoop); // Loop the game
+  }
+
+  // Keydown event
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'w' || e.key === 'W') keys.w = true;
+    if (e.key === 'a' || e.key === 'A') keys.a = true;
+    if (e.key === 's' || e.key === 'S') keys.s = true;
+    if (e.key === 'd' || e.key === 'D') keys.d = true;
+    if (e.key === 'e' || e.key === 'E') keys.e = true;
+    if (e.key === 'p' || e.key === 'P') keys.p = true;
+    if (e.key === 'h' || e.key === 'H') keys.h = true;
+  });
+
+  // Keyup event
+  document.addEventListener('keyup', (e) => {
+    if (e.key === 'w' || e.key === 'W') keys.w = false;
+    if (e.key === 'a' || e.key === 'A') keys.a = false;
+    if (e.key === 's' || e.key === 'S') keys.s = false;
+    if (e.key === 'd' || e.key === 'D') keys.d = false;
+  });
+
+  // Start the game loop
+  gameLoop();
+
+</script>
+
+</body>
