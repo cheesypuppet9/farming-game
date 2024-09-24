@@ -117,8 +117,8 @@
             player.onGround = false; // Reset ground status for each frame
 
             platforms.forEach(platform => {
-                // Check if the player is above the platform and falling onto it
-                if (player.y + player.height <= platform.y && player.y + player.height + player.dy >= platform.y &&
+                // Check if the player is falling onto the platform from above
+                if (player.dy >= 0 && player.y + player.height <= platform.y && player.y + player.height + player.dy >= platform.y &&
                     player.x + player.width >= platform.x && player.x <= platform.x + platform.width) {
                     // Place the player on top of the platform
                     player.onGround = true;
