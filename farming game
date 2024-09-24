@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Farming Game with NPCs</title>
+  <title>Enhanced Farming Game</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css">
   <style>
     body, html {
@@ -29,7 +29,32 @@
       border-radius: 5px;
     }
 
-    /* Basic styles for crops */
+    #shop {
+      position: absolute;
+      right: 10px;
+      top: 10px;
+      width: 200px;
+      background: rgba(255, 255, 255, 0.8);
+      padding: 10px;
+      border-radius: 5px;
+      display: none;
+    }
+
+    /* Player and NPC */
+    .npc {
+      width: 50px;
+      height: 50px;
+      background-color: yellow;
+      position: absolute;
+    }
+
+    .player {
+      width: 50px;
+      height: 50px;
+      background-color: blue;
+      position: absolute;
+    }
+
     .plot {
       width: 50px;
       height: 50px;
@@ -46,21 +71,8 @@
       background-color: #f4a460; /* Harvested plot color */
     }
 
-    /* Player and NPC */
-    .npc {
-      width: 50px;
-      height: 50px;
-      background-color: yellow;
-      position: absolute;
-      top: 200px;
-      left: 600px;
-    }
-
-    .player {
-      width: 50px;
-      height: 50px;
-      background-color: blue;
-      position: absolute;
+    .crop-stage {
+      background-color: #228B22; /* Growing crop color */
     }
   </style>
 </head>
@@ -69,8 +81,18 @@
 <div id="gameInfo">
   <h3>Farming Game</h3>
   <p>Use <strong>WASD</strong> to move. Go near an NPC and press <strong>E</strong> to interact.</p>
-  <p>Walk over a plot and press <strong>P</strong> to plant, <strong>H</strong> to harvest.</p>
+  <p>Walk over a plot and press <strong>P</strong> to plant, <strong>H</strong> to harvest. Open the shop with <strong>O</strong>.</p>
   <p id="time">Day 1: Morning</p>
+  <p id="inventory">Inventory: 0 crops</p>
+  <p id="money">Money: $100</p>
+</div>
+
+<div id="shop">
+  <h3>Shop</h3>
+  <p><strong>Seed Packets</strong></p>
+  <p>Buy Seeds (10 coins each): <button onclick="buySeeds()">Buy</button></p>
+  <p>Sell Harvested Crops (5 coins each): <button onclick="sellCrops()">Sell</button></p>
+  <p id="shopInventory">You have 0 seeds.</p>
 </div>
 
 <main class="container">
@@ -86,7 +108,12 @@
   const gameState = {
     day: 1,
     timeOfDay: 'Morning',
-    timeTick: 0
+    timeTick: 0,
+    money: 100,
+    inventory: {
+      crops: 0,
+      seeds: 0
+    }
   };
 
   // Player character
@@ -95,26 +122,30 @@
     y: 50,
     width: 50,
     height: 50,
-    speed: 3
+    speed: 3,
+    image: new Image()
   };
+  player.image.src = 'https://via.placeholder.com/50x50/0000FF/FFFFFF?text=Player';
 
-  // NPC data
+  // NPC (Shopkeeper)
   const npc = {
     x: 600,
     y: 200,
     width: 50,
     height: 50,
-    name: 'Farmer Bob',
-    dialog: 'Howdy, welcome to the farm!'
+    name: 'Shopkeeper',
+    dialog: 'Welcome to the shop!',
+    image: new Image()
   };
+  npc.image.src = 'https://via.placeholder.com/50x50/FFFF00/000000?text=NPC';
 
-  // Plots for farming
+  // Farming plots
   const plots = [
-    { x: 100, y: 400, status: 'empty' },
-    { x: 160, y: 400, status: 'empty' },
-    { x: 220, y: 400, status: 'empty' },
-    { x: 280, y: 400, status: 'empty' },
-    { x: 340, y: 400, status: 'empty' }
+    { x: 100, y: 400, status: 'empty', growth: 0 },
+    { x: 160, y: 400, status: 'empty', growth: 0 },
+    { x: 220, y: 400, status: 'empty', growth: 0 },
+    { x: 280, y: 400, status: 'empty', growth: 0 },
+    { x: 340, y: 400, status: 'empty', growth: 0 }
   ];
 
   const keys = {
@@ -124,21 +155,20 @@
     d: false,
     e: false,
     p: false,
-    h: false
+    h: false,
+    o: false
   };
 
-  // Function to draw NPC
-  function drawNPC() {
-    ctx.fillStyle = 'yellow';
-    ctx.fillRect(npc.x, npc.y, npc.width, npc.height);
-    ctx.font = '14px Arial';
-    ctx.fillText('NPC: ' + npc.name, npc.x - 20, npc.y - 10);
+  // Draw player
+  function drawPlayer() {
+    ctx.drawImage(player.image, player.x, player.y, player.width, player.height);
   }
 
-  // Function to draw player
-  function drawPlayer() {
-    ctx.fillStyle = 'blue';
-    ctx.fillRect(player.x, player.y, player.width, player.height);
+  // Draw NPC
+  function drawNPC() {
+    ctx.drawImage(npc.image, npc.x, npc.y, npc.width, npc.height);
+    ctx.font = '14px Arial';
+    ctx.fillText('NPC: ' + npc.name, npc.x - 20, npc.y - 10);
   }
 
   // Draw farming plots
@@ -148,6 +178,8 @@
         ctx.fillStyle = '#6b8e23'; // Empty plot
       } else if (plot.status === 'planted') {
         ctx.fillStyle = '#3cb371'; // Planted crop
+      } else if (plot.status === 'growing') {
+        ctx.fillStyle = '#228B22'; // Growing crop
       } else if (plot.status === 'harvested') {
         ctx.fillStyle = '#f4a460'; // Harvested plot
       }
@@ -164,15 +196,54 @@
     }
   }
 
-  // Plant or harvest on plot
+  // Open/Close Shop
+  function toggleShop() {
+    const shop = document.getElementById('shop');
+    shop.style.display = shop.style.display === 'none' ? 'block' : 'none';
+  }
+
+  // Buy seeds from shop
+  function buySeeds() {
+    if (gameState.money >= 10) {
+      gameState.money -= 10;
+      gameState.inventory.seeds++;
+      updateInventoryDisplay();
+    } else {
+      alert('Not enough money!');
+    }
+  }
+
+  // Sell harvested crops
+  function sellCrops() {
+    if (gameState.inventory.crops > 0) {
+      gameState.money += gameState.inventory.crops * 5;
+      gameState.inventory.crops = 0;
+      updateInventoryDisplay();
+    } else {
+      alert('No crops to sell!');
+    }
+  }
+
+  // Update inventory display
+  function updateInventoryDisplay() {
+    document.getElementById('inventory').textContent = 'Inventory: ' + gameState.inventory.crops + ' crops';
+    document.getElementById('money').textContent = 'Money: $' + gameState.money;
+    document.getElementById('shopInventory').textContent = 'You have ' + gameState.inventory.seeds + ' seeds.';
+  }
+
+  // Plant or harvest crops on plot
   function interactWithPlot() {
     plots.forEach(plot => {
       if (player.x < plot.x + 50 && player.x + player.width > plot.x &&
           player.y < plot.y + 50 && player.y + player.height > plot.y) {
-        if (keys.p && plot.status === 'empty') {
+        if (keys.p && plot.status === 'empty' && gameState.inventory.seeds > 0) {
           plot.status = 'planted';
-        } else if (keys.h && plot.status === 'planted') {
+          gameState.inventory.seeds--;
+          updateInventoryDisplay();
+        } else if (keys.h && plot.status === 'growing') {
           plot.status = 'harvested';
+          gameState.inventory.crops++;
+          updateInventoryDisplay();
         }
         keys.p = false;
         keys.h = false;
@@ -180,7 +251,19 @@
     });
   }
 
-  // Function to move player
+  // Grow crops over time
+  function growCrops() {
+    plots.forEach(plot => {
+      if (plot.status === 'planted') {
+        plot.growth++;
+        if (plot.growth >= 100) {
+          plot.status = 'growing'; // Fully grown
+        }
+      }
+    });
+  }
+
+  // Move player
   function movePlayer() {
     if (keys.w && player.y > 0) player.y -= player.speed;
     if (keys.s && player.y + player.height < canvas.height) player.y += player.speed;
@@ -188,10 +271,11 @@
     if (keys.d && player.x + player.width < canvas.width) player.x += player.speed;
   }
 
-  // Update game state (day-night cycle)
+  // Update game time (day-night cycle)
   function updateTime() {
     gameState.timeTick++;
     if (gameState.timeTick % 300 === 0) {
+      growCrops();
       if (gameState.timeOfDay === 'Morning') gameState.timeOfDay = 'Afternoon';
       else if (gameState.timeOfDay === 'Afternoon') gameState.timeOfDay = 'Evening';
       else if (gameState.timeOfDay === 'Evening') {
@@ -224,6 +308,10 @@
     if (e.key === 'e' || e.key === 'E') keys.e = true;
     if (e.key === 'p' || e.key === 'P') keys.p = true;
     if (e.key === 'h' || e.key === 'H') keys.h = true;
+    if (e.key === 'o' || e.key === 'O') {
+      keys.o = true;
+      toggleShop();
+    }
   });
 
   // Keyup event
@@ -232,6 +320,9 @@
     if (e.key === 'a' || e.key === 'A') keys.a = false;
     if (e.key === 's' || e.key === 'S') keys.s = false;
     if (e.key === 'd' || e.key === 'D') keys.d = false;
+    if (e.key === 'p' || e.key === 'P') keys.p = false;
+    if (e.key === 'h' || e.key === 'H') keys.h = false;
+    if (e.key === 'o' || e.key === 'O') keys.o = false;
   });
 
   // Start the game loop
@@ -240,3 +331,5 @@
 </script>
 
 </body>
+</html>
+
