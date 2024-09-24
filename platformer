@@ -1,210 +1,133 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Infinite Platformer Game</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css">
-    <style>
-        body, html {
-            margin: 0;
-            padding: 0;
-            overflow: hidden;
-            height: 100%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            background-color: #282c34;
-        }
-        canvas {
-            background-color: #87ceeb;
-            border: 2px solid #000;
-        }
-        #score {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            color: white;
-            font-size: 20px;
-            font-weight: bold;
-        }
-        #countdown {
-            position: absolute;
-            font-size: 48px;
-            color: white;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            display: none;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Infinite Platformer Game</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css">
+  <style>
+    body, html {
+      height: 100%;
+      margin: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background-color: #f4f4f4;
+    }
+
+    canvas {
+      border: 1px solid #000;
+      background-color: #e0e0e0;
+    }
+  </style>
 </head>
 <body>
 
-    <div id="score">Score: 0</div>
-    <div id="countdown">3</div>
-    <canvas id="gameCanvas" width="800" height="400"></canvas>
+<main class="container">
+  <h1>Infinite Platformer</h1>
+  <canvas id="gameCanvas" width="800" height="400"></canvas>
+</main>
 
-    <script>
-        const canvas = document.getElementById("gameCanvas");
-        const ctx = canvas.getContext("2d");
-        const scoreDisplay = document.getElementById("score");
-        const countdownDisplay = document.getElementById("countdown");
+<script>
+  // Initialize canvas and context
+  const canvas = document.getElementById('gameCanvas');
+  const ctx = canvas.getContext('2d');
 
-        // Game Variables
-        let player = { x: 50, y: 300, width: 30, height: 30, dy: 0, gravity: 0.5, jumpPower: -10, onGround: false };
-        let platforms = [];
-        let score = 0;
-        let gameSpeed = 2;
-        let gameOver = false;
-        let gameStarted = false;
+  // Game settings
+  const player = {
+    x: 50,
+    y: 350,
+    width: 50,
+    height: 50,
+    color: 'blue',
+    dx: 0,
+    dy: 0,
+    speed: 3
+  };
 
-        // Platform generation function
-        function generatePlatform() {
-            const randomHeight = Math.random() * 100 + 250; // Random heights for variety
-            const randomWidth = Math.random() * 100 + 150;  // Random widths for variety
-            platforms.push({ x: canvas.width, y: randomHeight, width: randomWidth, height: 20 });
-        }
+  const keys = {
+    a: false,
+    w: false,
+    d: false,
+    s: false
+  };
 
-        // Initial platform
-        platforms.push({ x: 0, y: 350, width: 800, height: 20 });
+  // Function to draw player
+  function drawPlayer() {
+    ctx.fillStyle = player.color;
+    ctx.fillRect(player.x, player.y, player.width, player.height);
+  }
 
-        // Draw player
-        function drawPlayer() {
-            ctx.fillStyle = "red";
-            ctx.fillRect(player.x, player.y, player.width, player.height);
-        }
+  // Function to clear canvas
+  function clearCanvas() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  }
 
-        // Draw platforms
-        function drawPlatforms() {
-            ctx.fillStyle = "green";
-            platforms.forEach(platform => {
-                ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
-            });
-        }
+  // Update game state
+  function update() {
+    clearCanvas();
+    drawPlayer();
+    movePlayer();
+    requestAnimationFrame(update);
+  }
 
-        // Update player position
-        function updatePlayer() {
-            player.dy += player.gravity;
-            player.y += player.dy;
+  // Move the player based on key presses
+  function movePlayer() {
+    if (keys.a && player.x > 0) {
+      player.dx = -player.speed; // Move left
+    } else if (keys.d && player.x + player.width < canvas.width) {
+      player.dx = player.speed; // Move right
+    } else {
+      player.dx = 0;
+    }
 
-            if (player.y + player.height >= canvas.height) {
-                gameOver = true;
-            }
+    if (keys.w && player.y > 0) {
+      player.dy = -player.speed; // Move up
+    } else if (keys.s && player.y + player.height < canvas.height) {
+      player.dy = player.speed; // Move down
+    } else {
+      player.dy = 0;
+    }
 
-            // Jump logic
-            if (player.onGround && keys["Space"] && gameStarted) {
-                player.dy = player.jumpPower;
-                player.onGround = false;
-            }
-        }
+    player.x += player.dx;
+    player.y += player.dy;
+  }
 
-        // Update platforms
-        function updatePlatforms() {
-            platforms.forEach((platform, index) => {
-                platform.x -= gameSpeed;
-                if (platform.x + platform.width < 0) {
-                    platforms.splice(index, 1);
-                    generatePlatform();  // Generate new platforms with variation
-                    score++;
-                    scoreDisplay.innerHTML = "Score: " + score;
-                }
-            });
-        }
+  // Keydown event handler
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'a' || e.key === 'A') {
+      keys.a = true;
+    }
+    if (e.key === 'd' || e.key === 'D') {
+      keys.d = true;
+    }
+    if (e.key === 'w' || e.key === 'W') {
+      keys.w = true;
+    }
+    if (e.key === 's' || e.key === 'S') {
+      keys.s = true;
+    }
+  });
 
-        // Collision detection between player and platforms
-        function checkCollision() {
-            player.onGround = false; // Reset ground status for each frame
+  // Keyup event handler
+  document.addEventListener('keyup', (e) => {
+    if (e.key === 'a' || e.key === 'A') {
+      keys.a = false;
+    }
+    if (e.key === 'd' || e.key === 'D') {
+      keys.d = false;
+    }
+    if (e.key === 'w' || e.key === 'W') {
+      keys.w = false;
+    }
+    if (e.key === 's' || e.key === 'S') {
+      keys.s = false;
+    }
+  });
 
-            platforms.forEach(platform => {
-                // Check if the player is falling onto the platform from above
-                if (player.dy >= 0 && player.y + player.height <= platform.y && player.y + player.height + player.dy >= platform.y &&
-                    player.x + player.width >= platform.x && player.x <= platform.x + platform.width) {
-                    // Place the player on top of the platform
-                    player.onGround = true;
-                    player.dy = 0;
-                    player.y = platform.y - player.height;
-                }
-            });
-        }
-
-        // Game Loop
-        function gameLoop() {
-            if (gameOver) {
-                gameOverScreen();
-                return;
-            }
-
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            updatePlayer();
-            updatePlatforms();
-            checkCollision();
-
-            drawPlayer();
-            drawPlatforms();
-
-            requestAnimationFrame(gameLoop);
-        }
-
-        // Game Over Screen and Restart
-        function gameOverScreen() {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.font = "48px serif";
-            ctx.fillStyle = "white";
-            ctx.fillText("Game Over", canvas.width / 2 - 150, canvas.height / 2);
-            ctx.fillText("Press Space to Restart", canvas.width / 2 - 200, canvas.height / 2 + 50);
-        }
-
-        // Key Events
-        const keys = {};
-        window.addEventListener("keydown", (e) => {
-            keys[e.code] = true;
-
-            if (gameOver && e.code === "Space") {
-                restartGame();
-            }
-        });
-
-        window.addEventListener("keyup", (e) => {
-            keys[e.code] = false;
-        });
-
-        // Start Countdown
-        function startCountdown() {
-            countdownDisplay.style.display = 'block';
-            let counter = 3;
-
-            const countdownInterval = setInterval(() => {
-                countdownDisplay.innerHTML = counter;
-                counter--;
-
-                if (counter < 0) {
-                    clearInterval(countdownInterval);
-                    countdownDisplay.style.display = 'none';
-                    gameStarted = true;
-                    gameLoop();
-                }
-            }, 1000);
-        }
-
-        // Restart Game Function
-        function restartGame() {
-            player = { x: 50, y: 300, width: 30, height: 30, dy: 0, gravity: 0.5, jumpPower: -10, onGround: false };
-            platforms = [{ x: 0, y: 350, width: 800, height: 20 }];
-            score = 0;
-            gameSpeed = 2;
-            gameOver = false;
-            scoreDisplay.innerHTML = "Score: 0";
-            gameStarted = false;
-            startCountdown();
-        }
-
-        // Start the countdown when the page loads
-        window.onload = () => {
-            startCountdown();
-        };
-    </script>
+  // Start the game loop
+  update();
+</script>
 
 </body>
 </html>
